@@ -1,0 +1,6 @@
+github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
+github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
+github.com/jimlawless/whereami v0.0.0-20160417220522-aebf70d4a772 h1:AmdJkqc+PNWRgFZH/W9W5HbSt5L42ZJaG3LBqIA8D/M=
+github.com/jimlawless/whereami v0.0.0-20160417220522-aebf70d4a772/go.mod h1:O5/I95fNj2n4v8dVHc/XX/rv4i9P5AAr0koHbBkPnh8=
+github.com/rs/cors v1.7.0 h1:+88SsELBHx5r+hZ8TCkggzSstaWNbDvThkVK8H6f9ik=
+github.com/rs/cors v1.7.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
