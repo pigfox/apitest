@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/jimlawless/whereami"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"testing"
+
+	"github.com/gorilla/mux"
+	"github.com/jimlawless/whereami"
 )
 
 var a App
@@ -108,6 +109,49 @@ func TestCreatePost(t *testing.T) {
 	checkResponseCode(201, response.StatusCode)
 }
 
+func TestCreatePosts(t *testing.T) {
+	tests := []Post{}
+
+	test1 := Post{
+		UserId: 1,
+		Id:     1,
+		Title:  "Node is awesome",
+		Body:   "Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine.",
+	}
+
+	test2 := Post{
+		UserId: 1,
+		Id:     2,
+		Title:  "Spring Boot is cooler",
+		Body:   "Spring Boot makes it easy to create stand-alone, production-grade Spring based Applications that you can \"just run\".",
+	}
+	test3 := Post{
+		UserId: 2,
+		Id:     3,
+		Title:  "Go is faster",
+		Body:   "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
+	}
+	test4 := Post{
+		UserId: 3,
+		Id:     4,
+		Title:  "'What about me?' -Rails",
+		Body:   "Ruby on Rails makes it much easier and more fun. It includes everything you need to build fantastic applications, and you can learn it with the support of our large, friendly community.",
+	}
+
+	tests = append(tests, test1)
+	tests = append(tests, test2)
+	tests = append(tests, test3)
+	tests = append(tests, test4)
+
+	buf := new(bytes.Buffer)
+	json.NewEncoder(buf).Encode(tests)
+	req, _ := http.NewRequest("POST", "http://localhost:9000/api/v1/posts", buf)
+	response := executeRequest(req)
+	defer response.Body.Close()
+
+	checkResponseCode(201, response.StatusCode)
+}
+
 func TestUpdatePost(t *testing.T) {
 	test := &Post{
 		UserId: 1,
@@ -130,4 +174,3 @@ func TestDeletePost(t *testing.T) {
 
 	checkResponseCode(200, response.StatusCode)
 }
-

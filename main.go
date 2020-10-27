@@ -56,7 +56,7 @@ func setConfigs() {
 	config.apiKey = "DNU7vhMsXWEymmxt"
 }
 
-func Authenticate(h http.Handler) http.Handler {
+func authenticate(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("api-key") != config.apiKey {
 			http.Error(w, "Access Denied", http.StatusForbidden)
@@ -79,10 +79,11 @@ func routes() {
 	})
 	path := config.apiPath + config.apiVersion
 	router := mux.NewRouter()
-	router.Use(Authenticate)
+	router.Use(authenticate)
 	router.HandleFunc(path+"/post/{id}", getPost).Methods("GET")
 	router.HandleFunc(path+"/post/{id}/user", getPostByUser).Methods("GET")
 	router.HandleFunc(path+"/post", createPost).Methods("POST")
+	router.HandleFunc(path+"/posts", createPosts).Methods("POST")
 	router.HandleFunc(path+"/post/{id}", updatePost).Methods("PUT")
 	router.HandleFunc(path+"/post/{id}", deletePost).Methods("DELETE")
 	router.HandleFunc(path+"/posts", getPosts).Methods("GET")
@@ -123,6 +124,48 @@ func getPostByUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	output(w, filteredUsers)
+}
+
+func createPosts(w http.ResponseWriter, r *http.Request) {
+	initialLength := len(posts.Collection)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println(whereami.WhereAmI(), err.Error())
+	}
+	defer r.Body.Close()
+
+	var postsReq []Post
+	err = json.Unmarshal([]byte(body), &postsReq)
+
+	if err != nil {
+		switch t := err.(type) {
+		case *json.SyntaxError:
+			jsn := string(body[0:t.Offset])
+			jsn += "<--(Invalid Character)"
+			log.Println(whereami.WhereAmI(), fmt.Sprintf("Invalid character at offset %v\n %s", t.Offset, jsn))
+		case *json.UnmarshalTypeError:
+			jsn := string(body[0:t.Offset])
+			jsn += "<--(Invalid Type)"
+			log.Println(whereami.WhereAmI(), fmt.Sprintf("Invalid value at offset %v\n %s", t.Offset, jsn))
+		default:
+			log.Println(err.Error())
+		}
+	}
+
+	newLength := 0
+
+	for _, post := range postsReq {
+		if validPost(post) {
+			posts.Collection = append(posts.Collection, post)
+			newLength = len(posts.Collection)
+		}
+	}
+
+	if initialLength < newLength {
+		w.WriteHeader(201)
+	} else {
+		w.WriteHeader(400)
+	}
 }
 
 func createPost(w http.ResponseWriter, r *http.Request) {
