@@ -125,12 +125,14 @@ func TestCreatePosts(t *testing.T) {
 		Title:  "Spring Boot is cooler",
 		Body:   "Spring Boot makes it easy to create stand-alone, production-grade Spring based Applications that you can \"just run\".",
 	}
+
 	test3 := Post{
 		UserId: 2,
 		Id:     3,
 		Title:  "Go is faster",
 		Body:   "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
 	}
+
 	test4 := Post{
 		UserId: 3,
 		Id:     4,
