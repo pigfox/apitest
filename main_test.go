@@ -26,7 +26,7 @@ func (a *App) Initialize() {
 
 func (a *App) Run(addr string) {}
 
-func checkResponseCode(expected, actual int) {
+func checkResponseCode(expected int, actual int) {
 	if expected != actual {
 		log.Println(fmt.Printf("Expected response code %d. Got %d\n", expected, actual))
 	}
@@ -42,38 +42,6 @@ func executeRequest(req *http.Request) *http.Response {
 	}
 
 	return resp
-}
-
-func TestGetPost(t *testing.T) {
-	req, _ := http.NewRequest("GET", "http://localhost:9000/api/v1/post/1", nil)
-	response := executeRequest(req)
-
-	checkResponseCode(http.StatusOK, response.StatusCode)
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Println(whereami.WhereAmI(), err.Error())
-	}
-
-	if body := string(body); body == "" {
-		t.Errorf("Expected an non empty string. Got %s", body)
-	}
-}
-
-func TestGetPosts(t *testing.T) {
-	req, _ := http.NewRequest("GET", "http://localhost:9000/api/v1/posts", nil)
-	response := executeRequest(req)
-
-	checkResponseCode(http.StatusOK, response.StatusCode)
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Println(whereami.WhereAmI(), err.Error())
-	}
-
-	if body := string(body); body == "" {
-		t.Errorf("Expected an non empty string. Got %s", body)
-	}
 }
 
 func TestGetPostByUser(t *testing.T) {
@@ -94,8 +62,8 @@ func TestGetPostByUser(t *testing.T) {
 
 func TestCreatePost(t *testing.T) {
 	test := &Post{
-		UserId: 1,
-		Id:     2,
+		UserID: 1,
+		ID:     5,
 		Title:  "Spring Boot is cooler",
 		Body:   "Spring Boot makes it easy to create stand-alone, production-grade Spring based Applications that you can \"just run\"",
 	}
@@ -113,29 +81,29 @@ func TestCreatePosts(t *testing.T) {
 	tests := []Post{}
 
 	test1 := Post{
-		UserId: 1,
-		Id:     1,
+		UserID: 1,
+		ID:     1,
 		Title:  "Node is awesome",
 		Body:   "Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine.",
 	}
 
 	test2 := Post{
-		UserId: 1,
-		Id:     2,
+		UserID: 1,
+		ID:     2,
 		Title:  "Spring Boot is cooler",
 		Body:   "Spring Boot makes it easy to create stand-alone, production-grade Spring based Applications that you can \"just run\".",
 	}
 
 	test3 := Post{
-		UserId: 2,
-		Id:     3,
+		UserID: 2,
+		ID:     3,
 		Title:  "Go is faster",
 		Body:   "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
 	}
 
 	test4 := Post{
-		UserId: 3,
-		Id:     4,
+		UserID: 3,
+		ID:     4,
 		Title:  "'What about me?' -Rails",
 		Body:   "Ruby on Rails makes it much easier and more fun. It includes everything you need to build fantastic applications, and you can learn it with the support of our large, friendly community.",
 	}
@@ -156,8 +124,8 @@ func TestCreatePosts(t *testing.T) {
 
 func TestUpdatePost(t *testing.T) {
 	test := &Post{
-		UserId: 1,
-		Id:     1,
+		UserID: 1,
+		ID:     1,
 		Title:  "Go is is awesome",
 		Body:   "Go was developed by Google",
 	}
@@ -168,6 +136,38 @@ func TestUpdatePost(t *testing.T) {
 	response := executeRequest(req)
 
 	checkResponseCode(200, response.StatusCode)
+}
+
+func TestGetPosts(t *testing.T) {
+	req, _ := http.NewRequest("GET", "http://localhost:9000/api/v1/posts", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(http.StatusOK, response.StatusCode)
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Println(whereami.WhereAmI(), err.Error())
+	}
+
+	if body := string(body); body == "" {
+		t.Errorf("Expected an non empty string. Got %s", body)
+	}
+}
+
+func TestGetPost(t *testing.T) {
+	req, _ := http.NewRequest("GET", "http://localhost:9000/api/v1/post/1", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(http.StatusOK, response.StatusCode)
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Println(whereami.WhereAmI(), err.Error())
+	}
+
+	if body := string(body); body == "" {
+		t.Errorf("Expected an non empty string. Got %s", body)
+	}
 }
 
 func TestDeletePost(t *testing.T) {

@@ -23,8 +23,13 @@ func main() {
 	routes()
 }
 
+var errorMsg ErrorMsg
 var config Configs
 var posts Posts
+
+type ErrorMsg struct {
+	Msg string
+}
 
 type Configs struct {
 	domain     string
@@ -36,8 +41,8 @@ type Configs struct {
 }
 
 type Post struct {
-	UserId int    `json:"userid" validate:"min=1,required"`
-	Id     int    `json:"id" validate:"min=1,required"`
+	UserID int    `json:"userid" validate:"min=1,required"`
+	ID     int    `json:"id" validate:"min=1,required"`
 	Title  string `json:"title" validate:"regexp=^[a-zA-Z]*$,required"`
 	Body   string `json:"body" validate:"regexp=^[a-zA-Z0-9]*$,required"`
 }
@@ -95,35 +100,53 @@ func routes() {
 }
 
 func getPost(w http.ResponseWriter, r *http.Request) {
-	var filteredUsers Posts
+	var filteredPosts Posts
 	parts := strings.Split(r.URL.Path, "/")
-	postId, err := strconv.Atoi(parts[4])
+	postID, err := strconv.Atoi(parts[4])
 	if err != nil {
 		log.Println(whereami.WhereAmI(), err.Error())
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 
 	for _, v := range posts.Collection {
-		if v.Id == postId {
-			filteredUsers.Collection = append(filteredUsers.Collection, v)
+		if v.ID == postID {
+			filteredPosts.Collection = append(filteredPosts.Collection, v)
 		}
 	}
-	output(w, filteredUsers)
+
+	if len(filteredPosts.Collection) == 1 {
+		output(w, filteredPosts)
+	} else {
+		e := ErrorMsg{Msg: "Post not found"}
+		printError(w, e)
+	}
 }
 
 func getPostByUser(w http.ResponseWriter, r *http.Request) {
-	var filteredUsers Posts
+	var filteredPosts Posts
 	parts := strings.Split(r.URL.Path, "/")
-	userId, err := strconv.Atoi(parts[4])
+	userID, err := strconv.Atoi(parts[4])
 	if err != nil {
 		log.Println(whereami.WhereAmI(), err.Error())
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 
 	for _, v := range posts.Collection {
-		if v.UserId == userId {
-			filteredUsers.Collection = append(filteredUsers.Collection, v)
+		if v.UserID == userID {
+			filteredPosts.Collection = append(filteredPosts.Collection, v)
 		}
 	}
-	output(w, filteredUsers)
+
+	if 0 < len(filteredPosts.Collection) {
+		output(w, filteredPosts)
+	} else {
+		e := ErrorMsg{Msg: "Posts not found"}
+		printError(w, e)
+	}
 }
 
 func createPosts(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +154,9 @@ func createPosts(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(whereami.WhereAmI(), err.Error())
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 	defer r.Body.Close()
 
@@ -150,12 +176,18 @@ func createPosts(w http.ResponseWriter, r *http.Request) {
 		default:
 			log.Println(err.Error())
 		}
+
+		log.Println(whereami.WhereAmI(), err.Error())
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 
 	newLength := 0
 
 	for _, post := range postsReq {
-		if validPost(post) {
+		valid := uniquePost(post)
+		if validPost(post) && valid {
 			posts.Collection = append(posts.Collection, post)
 			newLength = len(posts.Collection)
 		}
@@ -173,6 +205,9 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(whereami.WhereAmI(), err.Error())
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 	defer r.Body.Close()
 
@@ -191,11 +226,28 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 		default:
 			log.Println(err.Error())
 		}
+
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 
 	newLength := 0
+	unique := uniquePost(post)
+	if !unique {
+		e := ErrorMsg{Msg: "Id integrity violation"}
+		printError(w, e)
+		return
+	}
 
-	if validPost(post) {
+	valid := validPost(post)
+	if !valid {
+		e := ErrorMsg{Msg: "Invalid Post"}
+		printError(w, e)
+		return
+	}
+
+	if valid && unique {
 		posts.Collection = append(posts.Collection, post)
 		newLength = len(posts.Collection)
 	}
@@ -209,14 +261,19 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 
 func updatePost(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.URL.Path, "/")
-	postId, err := strconv.Atoi(parts[4])
+	postID, err := strconv.Atoi(parts[4])
 	if err != nil {
-		log.Println(whereami.WhereAmI(), err.Error())
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(whereami.WhereAmI(), err.Error())
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 	defer r.Body.Close()
 
@@ -235,51 +292,80 @@ func updatePost(w http.ResponseWriter, r *http.Request) {
 		default:
 			log.Println(err.Error())
 		}
-	}
-	var filteredUsers Posts
 
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
+	}
+
+	errorMsg := ""
+	var filteredPosts Posts
 	var valid bool
 	var statusCode int
+
 	if validPost(post) {
 		valid = true
 		statusCode = 200
 	} else {
 		valid = false
 		statusCode = 400
+		errorMsg = "Invalid Post"
 	}
 
 	for _, v := range posts.Collection {
-		if v.Id == postId && valid {
-			filteredUsers.Collection = append(filteredUsers.Collection, post)
+		if v.ID == postID && valid {
+			filteredPosts.Collection = append(filteredPosts.Collection, post)
 		} else {
-			filteredUsers.Collection = append(filteredUsers.Collection, v)
+			filteredPosts.Collection = append(filteredPosts.Collection, v)
 		}
 	}
+	log.Println(errorMsg)
+	posts = filteredPosts
 
-	posts = filteredUsers
-	w.WriteHeader(statusCode)
+	if errorMsg != "" {
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+	} else {
+		w.WriteHeader(statusCode)
+	}
 }
 
 func deletePost(w http.ResponseWriter, r *http.Request) {
+	initialLength := len(posts.Collection)
 	parts := strings.Split(r.URL.Path, "/")
-	postId, err := strconv.Atoi(parts[4])
+	postID, err := strconv.Atoi(parts[4])
 	if err != nil {
 		log.Println(whereami.WhereAmI(), err.Error())
+		e := ErrorMsg{Msg: err.Error()}
+		printError(w, e)
+		return
 	}
 
-	var filteredUsers Posts
+	var filteredPosts Posts
 	for _, v := range posts.Collection {
-		if v.Id != postId {
-			filteredUsers.Collection = append(filteredUsers.Collection, v)
+		if v.ID != postID {
+			filteredPosts.Collection = append(filteredPosts.Collection, v)
 		}
 	}
 
-	posts = filteredUsers
-	w.WriteHeader(200)
+	newLength := len(filteredPosts.Collection)
+
+	posts = filteredPosts
+	if newLength < initialLength {
+		w.WriteHeader(200)
+	} else {
+		e := ErrorMsg{Msg: "Post not deleted"}
+		printError(w, e)
+	}
 }
 
 func getPosts(w http.ResponseWriter, r *http.Request) {
-	output(w, posts)
+	if 0 < len(posts.Collection) {
+		output(w, posts)
+	} else {
+		e := ErrorMsg{Msg: "Posts not created"}
+		printError(w, e)
+	}
 }
 
 func recoverPanic() {
@@ -310,6 +396,16 @@ func recoverPanic() {
 	}
 }
 
+func printError(w http.ResponseWriter, e ErrorMsg) {
+	out, err := json.Marshal(e)
+	if err != nil {
+		log.Println(whereami.WhereAmI(), err.Error())
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	fmt.Fprintf(w, string(out))
+}
+
 func output(w http.ResponseWriter, u Posts) {
 	s := serialize(u)
 	w.Header().Set("Content-Type", "application/json")
@@ -326,11 +422,11 @@ func serialize(u Posts) string {
 }
 
 func validPost(post Post) bool {
-	if post.Id < 1 {
+	if post.ID < 1 {
 		return false
 	}
 
-	if post.UserId < 1 {
+	if post.UserID < 1 {
 		return false
 	}
 
@@ -342,5 +438,14 @@ func validPost(post Post) bool {
 		return false
 	}
 
+	return true
+}
+
+func uniquePost(p Post) bool {
+	for _, post := range posts.Collection {
+		if p.ID == post.ID {
+			return false
+		}
+	}
 	return true
 }
